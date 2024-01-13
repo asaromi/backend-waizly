@@ -1,4 +1,4 @@
-const { Attendance, AttendanceTime } = require('../databases/models')
+const { AttendanceTime } = require('../databases/models')
 const { ATTENDANCE_TYPE } = require('../libs/constants')
 const { debug } = require('../libs/response')
 const AttendanceRepository = require('../repositories/attendance')

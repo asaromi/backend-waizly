@@ -6,7 +6,7 @@ class BaseRepository {
   }
 
   async getPagination({ limit: pageLimit = '10', page = '1', query, options = {} }) {
-    const limit = parseInt(page)
+    const limit = parseInt(pageLimit)
     const offset = limit * (parseInt(page) - 1)
     const { count, rows } = await this.model.findAndCountAll({ where: query, ...options, limit: parseInt(limit), offset })
     return {

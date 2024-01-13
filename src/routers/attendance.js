@@ -1,7 +1,6 @@
 const { Router } = require('express')
 const { getMyAttendances, postAttendance } = require('../controllers/attendance')
-const { authenticate, authorize } = require('../libs/middleware')
-const { USER_ROLE } = require('../libs/constants')
+const { authenticate } = require('../libs/middleware')
 const router = new Router()
 
 router.use(authenticate)

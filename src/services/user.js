@@ -2,7 +2,6 @@ const { Employee, Op, User } = require('../databases/models')
 const { USER_ROLE } = require('../libs/constants')
 const generateId = require('../libs/ulid')
 const UserRepository = require('../repositories/user')
-const { ForbiddenError } = require('../libs/exceptions')
 
 class UserService {
   constructor() {
@@ -85,10 +84,10 @@ class UserService {
     return user
   }
   
-  async getCountUserBy(query = {}) {
+  async getCountUserBy(query) {
     if (query?.constructor !== Object) throw new Error('query must be an object')
 
-    return await users
+    return await this.userRepository.countData({ query })
   }
 
   async saveUserModel(user) {
@@ -101,7 +100,7 @@ class UserService {
     if (data?.constructor !== Object) throw new Error('data must be an object')
     else if (!data.id) data.id = generateId()
 
-    return new User(data)
+    return this.userRepository.generateModel(data)
   }
 }
 

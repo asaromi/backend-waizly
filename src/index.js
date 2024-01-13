@@ -15,7 +15,7 @@ if (HOST) listenParams.push(HOST)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cors())
-app.use(morgan('tiny'))
+app.use(morgan(logType))
 
 app.get('/', (req, res) => {
   return successResponse({ res, result: "Hello World" })

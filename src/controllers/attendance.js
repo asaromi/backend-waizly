@@ -1,6 +1,5 @@
 const { successResponse, errorResponse } = require('../libs/response')
 const { getLocation } = require('../libs/ipApi')
-const { Attendance, AttendanceTime } = require('../databases/models')
 const AttendanceService = require('../services/attendance')
 const AttendanceTimeService = require('../services/attendanceTime')
 const { BadRequestError } = require('../libs/exceptions')
