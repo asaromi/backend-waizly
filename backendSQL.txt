@@ -1,0 +1,24 @@
+1. SELECT * FROM employees;
+2. SELECT COUNT(id) FROM `employees` WHERE job_title = 'Manager';
+3. SELECT name, salary FROM `employees` WHERE department IN ('Sales', 'Marketing');
+4. SELECT AVG(salary) FROM `employees` WHERE joined_date >= DATE("2019-01-10"); // date 5 tahun terakhir dari 2024-01-10
+5. SELECT id, name, sales_data.sales as sales FROM `employees`
+INNER JOIN (
+    SELECT employee_id, SUM(sales) as sales FROM sales_data
+    GROUP BY employee_id
+) as sales_data
+ON employees.id = sales_data.employee_id
+ORDER BY sales DESC
+LIMIT 5;
+6. SELECT * FROM employees
+JOIN (
+    SELECT department, AVG(salary) as salary_dept, other_employees.salary_dept as salary_avg FROM employees, (
+    	SELECT department as other_department, AVG(salary) as salary_dept FROM employees
+    ) as other_employees
+    GROUP BY department
+    ORDER BY salary_dept DESC
+) as dept_salaries
+ON employees.department = dept_salaries.department
+WHERE dept_salaries.salary_dept > dept_salaries.salary_avg;
+7.
+8.
