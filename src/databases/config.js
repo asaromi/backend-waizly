@@ -11,7 +11,7 @@ module.exports = {
     host: DB_HOST,
     port: DB_PORT,
     dialect: DB_DIALECT,
-    debug: false,
+    logging: false,
     dialectOptions: {
       bigNumberStrings: true
     }
@@ -34,7 +34,7 @@ module.exports = {
     host: process.env.PROD_DB_HOSTNAME,
     port: process.env.PROD_DB_PORT,
     dialect: process.env.PROD_DB_DIALECT || 'mysql',
-    debug: false,
+    logging: false,
     dialectOptions: {
       bigNumberStrings: true,
       // ssl: {
