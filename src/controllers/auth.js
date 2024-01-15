@@ -96,7 +96,7 @@ const registerAdmin = async (req, res) => {
     } = req.body
 
     const password = await hashPassword(purePassword)
-    const user = await userService.storeUser({ name, email, password, type: USER_ROLE.ADMIN })
+    const user = await userService.storeUser({ name, email, password, role: USER_ROLE.ADMIN })
     const token = await generateToken({ id: user.id })
 
     return successResponse({ res, result: { user: user.toJSON(), token } })

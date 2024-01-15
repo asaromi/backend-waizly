@@ -7,15 +7,8 @@ class UserRepository extends BaseRepository {
     this.model = User
   }
 
-  async storeData(data) {
-    return await this.model.create(data)
-  }
-
-  async getBy({ query, options }) {
-    return await this.model.findOne({
-      where: query,
-      ...options
-    })
+  async updateBy({ query, data, options = {} }) {
+    return await this.model.update({ ...data }, { where: query, ...options })
   }
 }
 

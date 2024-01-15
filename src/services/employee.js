@@ -1,23 +1,13 @@
-const { Employee } = require('../databases/models')
 const generateId = require('../libs/ulid')
+const EmployeeRepository = require('../repositories/employee')
 
 class EmployeeService {
-  async #getEmployeeBy({ query, options = {} }) {
-    if (query?.constructor !== Object) throw new Error('query must be an object')
-    else if (query && options) options.where = query
-
-    return await Employee.findOne(options)
+  constructor() {
+    this.employeeRepository = new EmployeeRepository()
   }
 
-  async storeEmployee(payload) {
-    return await Employee.create(payload)
-  }
-
-  async getEmployeeById(id, options = {}) {
-    if (!id) throw new Error('id is required')
-
-    const query = { id }
-    return await this.#getEmployeeBy({ query, options })
+  async saveEmployeeModel(employee) {
+    return await this.employeeRepository.saveEmployeeModel(employee)
   }
 
   generateEmployeeModel(data) {
@@ -26,13 +16,7 @@ class EmployeeService {
 
     if (!data.id) data.id = generateId()
 
-    return new Employee(data)
-  }
-
-  async saveEmployeeModel(employee) {
-    if (!employee || !(employee instanceof Employee)) throw new Error('employee required and must be an instance of Employee')
-
-    return await employee.save()
+    return this.employeeRepository.generateModel(data)
   }
 }
 

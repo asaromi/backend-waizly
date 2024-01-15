@@ -1,11 +1,16 @@
+const { Model } = require('sequelize')
 const { Employee, Op, User } = require('../databases/models')
+const { hashPassword } = require('../libs/bcrypt')
 const { USER_ROLE } = require('../libs/constants')
+const { debug } = require('../libs/response')
 const generateId = require('../libs/ulid')
 const UserRepository = require('../repositories/user')
+const EmployeeRepository = require('../repositories/employee')
 
 class UserService {
   constructor() {
     this.userRepository = new UserRepository()
+    this.employeeRepository = new EmployeeRepository()
   }
 
   // updated with sequelize concept
@@ -101,6 +106,53 @@ class UserService {
     else if (!data.id) data.id = generateId()
 
     return this.userRepository.generateModel(data)
+  }
+
+  async updateUserModel({ user, ...data }) {
+    if (data?.constructor !== Object) throw new Error('data must be an object')
+
+    const updatePromises = []
+    const { employee } = user
+    if (!(user instanceof User) && !(user instanceof Model)) {
+      throw new Error('user must be an instance of User')
+    }
+
+    const {
+      name,
+      password,
+      email,
+      phoneNumber,
+      salary,
+      employmentType,
+      department,
+      jobTitle
+    } = data
+
+    user.name = name || user.name
+    user.email = email || user.email
+    user.phoneNumber = phoneNumber || user.phoneNumber
+    updatePromises.push(this.saveUserModel(user))
+
+    if (employee instanceof Employee) {
+      debug('employee will be updated')
+      employee.phoneNumber = phoneNumber || employee.phoneNumber
+      employee.salary = salary || employee.salary
+      employee.employmentType = employmentType || employee.employmentType
+      employee.department = department || employee.department
+      employee.jobTitle = jobTitle || employee.jobTitle
+
+      updatePromises.push(this.employeeRepository.saveEmployeeModel(employee))
+      user.emplyee = employee
+    }
+
+    if (password) {
+      user.password = await hashPassword(password)
+      updatePromises.push(this.saveUserModel(user))
+    }
+
+    await Promise.all(updatePromises)
+
+    return user.toJSON()
   }
 }
 

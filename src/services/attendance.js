@@ -2,13 +2,11 @@ const { AttendanceTime } = require('../databases/models')
 const { ATTENDANCE_TYPE } = require('../libs/constants')
 const { debug } = require('../libs/response')
 const AttendanceRepository = require('../repositories/attendance')
-const AttendanceTimeRepository = require('../repositories/attendanceTime')
 const { BadRequestError } = require('../libs/exceptions')
 
 class AttendanceService {
   constructor() {
     this.attendanceRepository = new AttendanceRepository()
-    this.attendanceTimeRepoitory = new AttendanceTimeRepository()
   }
 
   async recordAttendance(data) {

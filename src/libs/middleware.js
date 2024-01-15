@@ -23,12 +23,13 @@ const authenticate = async (req, res, next) => {
   }
 }
 
-const authorize = (roles = []) =>
+const authorize = (...roles) =>
   (req, res, next) => {
     try {
       const { user } = req
       if (!user) throw new AuthError('Unauthorized')
 
+      debug(user.role)
       if (roles.length && !roles.includes(user.role)) {
         throw new ForbiddenError('Forbidden Access')
       }
