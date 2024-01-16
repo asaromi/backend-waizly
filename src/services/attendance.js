@@ -1,36 +1,26 @@
-const { AttendanceTime } = require('../databases/models')
+const { Attendance, AttendanceTime } = require('../databases/models')
 const { ATTENDANCE_TYPE } = require('../libs/constants')
 const { debug } = require('../libs/response')
 const AttendanceRepository = require('../repositories/attendance')
+const AttendanceTimeService = require('./attendanceTime')
 const { BadRequestError } = require('../libs/exceptions')
 
 class AttendanceService {
   constructor() {
     this.attendanceRepository = new AttendanceRepository()
+    this.attendanceTimeService = new AttendanceTimeService()
   }
 
-  async recordAttendance(data) {
+  async createOrFindAttendance(data) {
     if (data?.constructor !== Object) throw new Error('data must be an object')
 
     const { type, ...payload } = data
-    payload.date = this.todayDate(data.utcOffset)
+    const date = this.todayDate(data.utcOffset)
 
-    if (Object.values(ATTENDANCE_TYPE).includes(type)) {
-      payload.timestamp = new Date()
-    }
-
-    const query = { date: payload.date, employeeId: payload.employeeId }
+    const query = { date, employeeId: payload.employeeId }
     const [attendance,] = await this.attendanceRepository.getByOrCreate({ query, data: query })
 
-    const attendanceId = attendance.id
-    const attendanceTime = await AttendanceTime.create({
-      attendanceId,
-      employeeId: payload.employeeId,
-      type,
-      ...payload,
-    })
-
-    return { attendance, attendanceTime }
+    return attendance
   }
 
   async getAttendancesByEmployeeId(employeeId, options = {}) {
@@ -53,6 +43,22 @@ class AttendanceService {
     }
 
     return await this.attendanceRepository.getPagination({ query, options: newOptions })
+  }
+
+  async deleteAttendanceByEmployeeId(employeeId, options = {}) {
+    try {
+      if (!employeeId) throw new BadRequestError('id is required')
+
+      const attendanceTime = await this.attendanceTimeService.deleteAttendanceTimeByEmployeeId(employeeId, options)
+      debug('attendanceTime deleted!', attendanceTime)
+
+      const attendance = await this.attendanceRepository.deleteData({ query: { employeeId }, options })
+      debug('attendance deleted!', attendance)
+
+      return { attendance, attendanceTime }
+    } catch (error) {
+      throw error
+    }
   }
 
   todayDate(timezoneOffset = "+0700") {

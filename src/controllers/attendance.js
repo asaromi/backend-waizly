@@ -1,8 +1,9 @@
-const { successResponse, errorResponse } = require('../libs/response')
+const { Op } = require('../databases/models')
+const { BadRequestError } = require('../libs/exceptions')
 const { getLocation } = require('../libs/ipApi')
+const { successResponse, errorResponse, debug } = require('../libs/response')
 const AttendanceService = require('../services/attendance')
 const AttendanceTimeService = require('../services/attendanceTime')
-const { BadRequestError } = require('../libs/exceptions')
 
 const attendanceService = new AttendanceService()
 const attendanceTimeService = new AttendanceTimeService()
@@ -23,41 +24,40 @@ const postAttendance = async (req, res) => {
     const { employee: { id: employeeId } } = req.user
     const { body: { ipAddress }, params: { type } } = req
 
-    if (!ipAddress) return errorResponse({ res, message: 'IP address is required', statusCode: 400 })
-    const [location, countAttendance] = await Promise.all([
-      getLocation(ipAddress),
-      attendanceTimeService.countAttendanceTime({ query: { employeeId, type } })
-    ])
+    if (!ipAddress) {
+      throw new BadRequestError('ipAddress is required')
+    }
+
+    const location = await getLocation(ipAddress)
+    const hourOffset = parseInt(location.utcOffset.slice(0, 3))
+    const minuteOffset = parseInt((hourOffset > 0 ? '-' : '') + location.utcOffset.slice(-3))
+
+    const starTimeUTC = new Date().setUTCHours(0, 0, 0, 0)
+    const minDate = new Date(starTimeUTC - (hourOffset * 60 + minuteOffset) * 60000)
+    const maxDate = new Date(minDate.getTime() + (23 * 3600000 + 59 * 60000 + 59 * 1000))
+    const date = minDate.toISOString().slice(0, 10)
+
+    const countQuery = { employeeId, type, timestamp: { [Op.between]: [minDate, maxDate] } }
+    const countAttendance = await attendanceTimeService.countAttendanceTime({ query: countQuery })
 
     if (countAttendance > 0) {
       throw new BadRequestError(`You have already checked ${type} today`)
     }
 
-    const date = attendanceService.todayDate(location.utcOffset)
-    const attendance = await attendanceService.recordAttendance({
-      date,
-      type,
+    const attendance = await attendanceService.createOrFindAttendance({ employeeId, date })
+    const attendanceTime = await attendanceTimeService.createAttendanceTime({
       employeeId,
+      attendanceId: attendance.id,
+      type,
       ipAddress,
+      timestamp: new Date(),
       ...location
     })
 
-    return successResponse({ res, result: attendance })
+    return successResponse({ res, result: { attendance, attendanceTime } })
   } catch (error) {
     return errorResponse({ res, error })
   }
 }
-
-// const updateEmployeeAttendance = async (req, res) => {
-//   try {
-//     const { id: attendanceId } = req.params
-//     const {
-//
-//     } = req.body
-//     const attendance = await attendanceService.updateAttendanceById(attendanceId, body)
-//   } catch (error) {
-//
-//   }
-// }
 
 module.exports = { getMyAttendances, postAttendance }
