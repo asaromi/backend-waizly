@@ -20,5 +20,12 @@ JOIN (
 ) as dept_salaries
 ON employees.department = dept_salaries.department
 WHERE dept_salaries.salary_dept > dept_salaries.salary_avg;
-7.
+7. SET @row_number := 0;
+SELECT (@row_number := @row_number + 1) as ranking, name as employee_name, sales_data.sales as sales FROM `employees`
+INNER JOIN (
+   SELECT employee_id, SUM(sales) as sales FROM sales_data
+   GROUP BY employee_id
+) as sales_data
+ON employees.id = sales_data.employee_id
+ORDER BY sales DESC;
 8.
