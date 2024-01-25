@@ -13,7 +13,6 @@ const debugError = (...args) => {
 }
 
 const successResponse = ({ message, res, result, statusCode = 200 }) => {
-  debug(statusCode, result)
   return res.status(statusCode).json({
     success: true,
     result,
