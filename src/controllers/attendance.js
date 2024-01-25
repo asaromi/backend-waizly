@@ -1,5 +1,6 @@
 const { Op } = require('../databases/models')
 const { BadRequestError } = require('../libs/exceptions')
+const { getTimestampDate } = require('../libs/formatter')
 const { getLocation } = require('../libs/ipApi')
 const { successResponse, errorResponse, debug } = require('../libs/response')
 const AttendanceService = require('../services/attendance')
@@ -29,22 +30,21 @@ const postAttendance = async (req, res) => {
     }
 
     const location = await getLocation(ipAddress)
-    const hourOffset = parseInt(location.utcOffset.slice(0, 3))
-    const minuteOffset = parseInt((hourOffset > 0 ? '-' : '') + location.utcOffset.slice(-3))
+    const { current, startOfDay, endOfDay, offset } = getTimestampDate({ offset: location.utcOffset })
 
-    const starTimeUTC = new Date().setUTCHours(0, 0, 0, 0)
-    const minDate = new Date(starTimeUTC - (hourOffset * 60 + minuteOffset) * 60000)
-    const maxDate = new Date(minDate.getTime() + (23 * 3600000 + 59 * 60000 + 59 * 1000))
-    const date = minDate.toISOString().slice(0, 10)
+    const today = new Date(current)
+    const date = today.toISOString().slice(0, 10)
+    const countQuery = { employeeId, type, timestamp: { [Op.between]: [new Date(startOfDay), new Date(endOfDay)] } }
 
-    const countQuery = { employeeId, type, timestamp: { [Op.between]: [minDate, maxDate] } }
     const countAttendance = await attendanceTimeService.countAttendanceTime({ query: countQuery })
-
     if (countAttendance > 0) {
       throw new BadRequestError(`You have already checked ${type} today`)
     }
 
-    const attendance = await attendanceService.createOrFindAttendance({ employeeId, date })
+    const attendance = await attendanceService.createOrFindAttendance({
+      date,
+      employeeId,
+    })
     const attendanceTime = await attendanceTimeService.createAttendanceTime({
       employeeId,
       attendanceId: attendance.id,
