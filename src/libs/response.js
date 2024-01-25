@@ -6,6 +6,12 @@ const debug = (...args) => {
   }
 }
 
+const debugError = (...args) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.error(...args)
+  }
+}
+
 const successResponse = ({ message, res, result, statusCode = 200 }) => {
   debug(statusCode, result)
   return res.status(statusCode).json({
@@ -16,8 +22,8 @@ const successResponse = ({ message, res, result, statusCode = 200 }) => {
 }
 
 const errorResponse = ({ error, res, statusCode = 500 }) => {
-  debug(error)
-  const { message, statusCode: code } = error
+  debugError(statusCode, error)
+  const { message, statusCode: code } = error || {}
 
   return res.status(code || statusCode).json({
     success: false,
