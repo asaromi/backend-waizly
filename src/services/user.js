@@ -1,50 +1,51 @@
 const { Model } = require('sequelize')
-const { Employee, Op, User } = require('../databases/models')
+const EmployeeService = require('./employee')
+const { Employee, Op, User, sequelize } = require('../databases/models')
 const { hashPassword } = require('../libs/bcrypt')
 const { USER_ROLE } = require('../libs/constants')
+const { BadRequestError, NotFoundError } = require('../libs/exceptions')
 const { debug } = require('../libs/response')
 const generateId = require('../libs/ulid')
 const UserRepository = require('../repositories/user')
-const EmployeeRepository = require('../repositories/employee')
 
 class UserService {
   constructor() {
     this.userRepository = new UserRepository()
-    this.employeeRepository = new EmployeeRepository()
+    this.employeeService = new EmployeeService()
   }
 
   // updated with sequelize concept
   async #getUserBy({ query, options }) {
     if (query?.constructor !== Object) throw new Error('query must be an object')
-    else if (query && options) options.where = query
+    else if (query && options) options.where = { ...query }
 
     const newOptions = this.#generateAuthAttributes(options)
     return await this.userRepository.getBy({ options: newOptions })
   }
 
   #generateAuthAttributes(options = {}) {
-    const { isAuth, isMiddleware, attributes = [], include = [], ...restOptions } = options
+    const { isAuth, isMiddleware, attributes = [], include = [] } = options
 
     if (isAuth || isMiddleware) {
-      restOptions.include = [...include, {
+      options.include = [...include, {
         model: Employee,
         as: 'employee',
       }]
     }
 
     if (isAuth) {
-      restOptions.attributes = {
+      options.attributes = {
         include: [...new Set([...attributes, 'password'])],
         exclude: ['role']
       }
     } else if (isMiddleware) {
-      restOptions.attributes = {
+      options.attributes = {
         include: [...new Set([...attributes, 'role'])],
         exclude: ['password']
       }
     }
 
-    return restOptions
+    return options
   }
 
   // updated with sequelize concept
@@ -101,13 +102,6 @@ class UserService {
     return await this.userRepository.saveModel(user)
   }
 
-  generateUserModel(data) {
-    if (data?.constructor !== Object) throw new Error('data must be an object')
-    else if (!data.id) data.id = generateId()
-
-    return this.userRepository.generateModel(data)
-  }
-
   async updateUserModel({ user, ...data }) {
     if (data?.constructor !== Object) throw new Error('data must be an object')
 
@@ -141,7 +135,7 @@ class UserService {
       employee.department = department || employee.department
       employee.jobTitle = jobTitle || employee.jobTitle
 
-      updatePromises.push(this.employeeRepository.saveEmployeeModel(employee))
+      updatePromises.push(this.employeeService.saveEmployeeModel(employee))
       user.emplyee = employee
     }
 
@@ -153,6 +147,50 @@ class UserService {
     await Promise.all(updatePromises)
 
     return user.toJSON()
+  }
+
+  async deleteUserBy({ query = {}, options }) {
+    if (query?.constructor !== Object) throw new Error('query must be an object')
+
+    debug('try deleting user with query', query)
+    const user = await this.#getUserBy({
+      query,
+      options: {
+        include: {
+          model: Employee, as: 'employee'
+        },
+        ...options
+      },
+    })
+
+    if (!user || !(user instanceof User)) throw new NotFoundError('User not found')
+
+    debug('user found!', user.toJSON())
+    let deleted = {}
+    if (user.employee) {
+      const deletedEmployee = await this.employeeService.deleteEmployeeModel(user.employee)
+      if (!deletedEmployee) throw new BadRequestError('Failed to delete employee')
+
+      deleted = { ...deletedEmployee }
+    }
+
+    deleted.user = await this.userRepository.deleteModel(user)
+    debug('user deleted!', deleted.user)
+    return deleted
+  }
+
+  async getPaginationUsers({ query, options }) {
+    if (query?.constructor !== Object) throw new Error('query must be an object')
+
+    const newOptions = this.#generateAuthAttributes(options)
+    return await this.userRepository.getPagination({ query, options: newOptions })
+  }
+
+  generateUserModel(data) {
+    if (data?.constructor !== Object) throw new Error('data must be an object')
+    else if (!data.id) data.id = generateId()
+
+    return this.userRepository.generateModel(data)
   }
 }
 
