@@ -5,42 +5,45 @@ class BaseRepository {
     this.model = model || Model
   }
 
-  async storeData(data) {
-    return await this.model.create(data)
+  async countData({ query }) {
+    return await this.model.count({ where: query })
+  }
+
+  async deleteData({ query, options = {} }) {
+    return await this.model.destroy({ where: query, ...options })
+  }
+
+  async deleteModel(model) {
+    if (!model || !(model instanceof Model)) throw new Error('model required and must be an instance of Model')
+
+    return await model.destroy()
   }
 
   async getBy({ query, options }) {
     return await this.model.findOne({ where: query, ...options })
   }
 
-  async saveModel(data) {
-    return data.save()
-  }
+  async getPagination({ query, options = {} }) {
+    const { limit = '10', page: currentPage = '1', ...where } = query
+    const offset = limit * (parseInt(currentPage) - 1)
 
-  async getPagination({ limit: pageLimit = '10', page = '1', query, options = {} }) {
-    const limit = parseInt(pageLimit)
-    const offset = limit * (parseInt(page) - 1)
-    const { count, rows } = await this.model.findAndCountAll({ where: query, ...options, limit: parseInt(limit), offset })
+    const { count, rows } = await this.model.findAndCountAll({ where, ...options, limit: parseInt(limit), offset })
     return {
       data: rows,
       meta: {
         totalData: count,
-        page,
+        page: parseInt(currentPage),
         lastPage: Math.ceil(count / limit),
       }
     }
   }
 
-  async countData({ query }) {
-    return await this.model.count({ where: query })
+  async storeData(data) {
+    return await this.model.create(data)
   }
 
-  async updateData({ query, data }) {
-    return await this.model.update(data, { where: query })
-  }
-
-  async deleteData({ query }) {
-    return await this.model.destroy({ where: query })
+  async saveModel(data) {
+    return data.save()
   }
 
   generateModel(data) {
