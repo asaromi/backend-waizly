@@ -1,9 +1,26 @@
-const UserService = require('../services/user')
-const { errorResponse, successResponse, debug } = require('../libs/response')
 const { Model } = require('sequelize')
-const { BadRequestError } = require('../libs/exceptions')
+const { Employee } = require('../databases/models')
+const { errorResponse, successResponse, debug } = require('../libs/response')
+const UserService = require('../services/user')
 
 const userService = new UserService()
+
+const getUsers = async (req, res) => {
+  try {
+    const options = {
+      include: {
+        model: Employee,
+        as: 'employee',
+        attributes: { exclude: ['createdAt', 'updatedAt'] }
+      }
+    }
+
+    const users = await userService.getPaginationUsers({ query: req.query, options })
+    return successResponse({ res, result: users })
+  } catch (error) {
+    return errorResponse({ res, error })
+  }
+}
 
 const updateAuthUser = async (req, res) => {
   try {
@@ -53,7 +70,15 @@ const updateAuthUser = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params
-    const user = await userService.getUserById(id)
+    const options = {
+      include: {
+        model: Employee,
+        as: 'employee',
+        attributes: { exclude: ['createdAt', 'updatedAt'] }
+      }
+    }
+
+    const user = await userService.getUserById(id, options)
     return successResponse({ res, result: user })
   } catch (error) {
     return errorResponse({ res, error })
@@ -101,4 +126,17 @@ const updateUserById = async (req, res) => {
   }
 }
 
-module.exports = { getUserById, updateAuthUser, updateUserById }
+const deleteUserById = async (req, res) => {
+  try {
+    const { params: { id } } = req
+
+    const deleted = await userService.deleteUserBy({ query: { id } })
+    if (!deleted?.user || !deleted) throw new Error('Failed to delete user')
+
+    return successResponse({ res, result: { userId: id, deleted } })
+  } catch (error) {
+    return errorResponse({ res, error })
+  }
+}
+
+module.exports = { deleteUserById, getUserById, getUsers, updateAuthUser, updateUserById }
